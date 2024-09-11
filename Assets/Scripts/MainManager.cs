@@ -1,8 +1,10 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Xml.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using System.IO;
 
 public class MainManager : MonoBehaviour
 {
@@ -11,6 +13,7 @@ public class MainManager : MonoBehaviour
     public Rigidbody Ball;
 
     public Text ScoreText;
+    public Text bestScoreText;
     public GameObject GameOverText;
     
     private bool m_Started = false;
@@ -18,11 +21,12 @@ public class MainManager : MonoBehaviour
     
     private bool m_GameOver = false;
 
+    public BestScore bestScore;
+
     
     // Start is called before the first frame update
     void Start()
-    {
-        Debug.Log("Name from menu: " + GameController.Instance.playerName);
+    {        
         const float step = 0.6f;
         int perLine = Mathf.FloorToInt(4.0f / step);
         
@@ -41,6 +45,13 @@ public class MainManager : MonoBehaviour
 
     private void Update()
     {
+        bestScore = GetBestScore();
+        if (bestScore.score < m_Points) {
+            bestScore.score = m_Points;
+            bestScore.name = GameController.Instance.playerName;
+            SaveBestScore(bestScore);
+        }
+        bestScoreText.text = "Welcome " + GameController.Instance.playerName + ". Best score: " + bestScore.name + ": " + bestScore.score;
         if (!m_Started)
         {
             if (Input.GetKeyDown(KeyCode.Space))
@@ -61,7 +72,7 @@ public class MainManager : MonoBehaviour
                 SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
             }
         }
-    }
+    }    
 
     void AddPoint(int point)
     {
@@ -73,5 +84,28 @@ public class MainManager : MonoBehaviour
     {
         m_GameOver = true;
         GameOverText.SetActive(true);
+    }
+
+    BestScore GetBestScore() {
+        BestScore savedBestScore = null; 
+        string path = Application.persistentDataPath + "/savefile.json";
+        Debug.Log(Application.persistentDataPath);
+        if (File.Exists(path)) {
+            Debug.Log("Loading best score");
+            string json = File.ReadAllText(path);
+            savedBestScore = JsonUtility.FromJson<BestScore>(json); 
+        } else {
+            Debug.Log("Creating new best score");
+            savedBestScore = new BestScore();
+            savedBestScore.score = 0;
+            savedBestScore.name = GameController.Instance.playerName;
+        }
+        return savedBestScore;
+    }
+
+    private void SaveBestScore(BestScore bestScore) {
+        Debug.Log("Saving new best score");
+        string json = JsonUtility.ToJson(bestScore);
+        File.WriteAllText(Application.persistentDataPath + "/savefile.json", json);
     }
 }
